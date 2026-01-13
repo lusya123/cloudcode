@@ -137,6 +137,17 @@ CloudClaude 必须具备完整的 Agent 能力，运行起来就像 Claude Code 
 
 ### Skills 系统
 
+> 🎯 **设计目标**：与 Claude Code 完全兼容的 Skills 系统，支持用户主动调用和 Claude 自动调用两种触发方式。
+
+#### 设计决策
+
+| 设计点 | 选择 | 说明 |
+|--------|------|------|
+| **触发方式** | 用户主动 + Claude 自动 | 用户可发送 `/skill-name` 触发，Claude 也能自动判断调用 |
+| **加载时机** | 按需懒加载 | 启动时只注入 skills 列表，调用时才加载完整内容 |
+| **文件格式** | 与 Claude Code 完全兼容 | 使用 YAML frontmatter + Markdown 格式 |
+| **预置 Skills** | 仅定义机制 | 文档定义机制，预置 Skills 单独创建 |
+
 #### Skills 加载路径
 
 Claude Code / Agent SDK 的 Skills 加载机制：
@@ -144,7 +155,9 @@ Claude Code / Agent SDK 的 Skills 加载机制：
 | 路径 | 说明 | 优先级 |
 |------|------|--------|
 | `~/.claude/skills/` | **全局 Skills**（用户主目录） | 所有会话都能使用 |
-| `<工作目录>/.claude/skills/` | **项目 Skills**（当前工作目录） | 仅该项目会话使用 |
+| `<工作目录>/.claude/skills/` | **项目 Skills**（当前工作目录） | 仅该项目会话使用（优先） |
+
+**加载优先级**：项目级 Skills > 全局 Skills（同名时项目级覆盖全局）
 
 **CloudClaude 的 Skills 存放位置**：
 
@@ -164,23 +177,14 @@ Claude Code / Agent SDK 的 Skills 加载机制：
     └── skill.md
 ```
 
-#### 预置 Skills
+#### Skill 文件格式
 
-系统应预置一些常用 Skills 到全局目录（`~/.claude/skills/`），让所有会话都能使用：
+Skill 文件使用 YAML frontmatter + Markdown 内容格式（与 Claude Code 完全兼容）：
 
-| Skill | 用途 | 说明 |
-|-------|------|------|
-| **feishu-bitable** | 飞书多维表格操作 | 读取、写入、更新表格数据 |
-| **server-monitor** | 服务器监控 | 检查 CPU、内存、磁盘、进程 |
-| **git-operations** | Git 操作 | 提交、推送、拉取、合并 |
-| **docker-manage** | Docker 管理 | 容器启停、镜像管理 |
-| **data-collector** | 数据采集 | 网页爬取、API 调用 |
-
-**示例 Skill: feishu-bitable**
 ```markdown
 ---
 name: feishu-bitable
-description: 操作飞书多维表格
+description: 操作飞书多维表格，读取和写入数据
 ---
 
 ## 使用场景
@@ -199,6 +203,226 @@ description: 操作飞书多维表格
 - 读取记录: GET /open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records
 - 写入记录: POST /open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records
 ```
+
+#### Skills 加载器
+
+**文件**: `src/skills/skill-loader.ts`
+
+```typescript
+import * as path from 'path';
+import * as fs from 'fs/promises';
+import * as yaml from 'yaml';
+
+/**
+ * Skill 元信息（用于注入 System Prompt）
+ */
+interface SkillMeta {
+  name: string;              // Skill 名称
+  description: string;       // 简短描述（用于 Claude 判断是否调用）
+  path: string;              // 文件路径
+  source: 'global' | 'project';
+}
+
+/**
+ * Skill 完整内容（调用时返回）
+ */
+interface SkillContent {
+  name: string;
+  description: string;
+  content: string;           // Skill 完整 Markdown 内容
+  source: 'global' | 'project';
+  path: string;
+}
+
+/**
+ * Skills 加载器
+ * 负责扫描、管理和加载 Skills
+ */
+export class SkillLoader {
+  private globalSkillsDir: string;    // ~/.claude/skills/
+  private projectSkillsDir: string;   // <workingDir>/.claude/skills/
+  private skillsCache: Map<string, SkillMeta> = new Map();
+
+  constructor(homeDir: string, workingDir: string) {
+    this.globalSkillsDir = path.join(homeDir, '.claude', 'skills');
+    this.projectSkillsDir = path.join(workingDir, '.claude', 'skills');
+  }
+
+  /**
+   * 扫描并加载所有 Skills 的元信息（name + description）
+   * 项目级 skill 优先级高于全局 skill（同名时覆盖）
+   */
+  async scanSkills(): Promise<SkillMeta[]> {
+    this.skillsCache.clear();
+
+    // 先加载全局 Skills
+    await this.scanDirectory(this.globalSkillsDir, 'global');
+
+    // 再加载项目 Skills（会覆盖同名全局 Skill）
+    await this.scanDirectory(this.projectSkillsDir, 'project');
+
+    return Array.from(this.skillsCache.values());
+  }
+
+  /**
+   * 扫描指定目录中的 Skills
+   */
+  private async scanDirectory(dir: string, source: 'global' | 'project'): Promise<void> {
+    try {
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          const skillPath = path.join(dir, entry.name, 'skill.md');
+          try {
+            const meta = await this.parseSkillMeta(skillPath, source);
+            this.skillsCache.set(meta.name, meta);
+          } catch (e) {
+            // skill.md 不存在或解析失败，跳过
+          }
+        }
+      }
+    } catch (e) {
+      // 目录不存在，跳过
+    }
+  }
+
+  /**
+   * 解析 skill.md 的 YAML frontmatter，提取元信息
+   */
+  private async parseSkillMeta(filePath: string, source: 'global' | 'project'): Promise<SkillMeta> {
+    const content = await fs.readFile(filePath, 'utf-8');
+    const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+    
+    if (!frontmatterMatch) {
+      throw new Error('No frontmatter found');
+    }
+
+    const frontmatter = yaml.parse(frontmatterMatch[1]);
+    
+    return {
+      name: frontmatter.name,
+      description: frontmatter.description || '',
+      path: filePath,
+      source
+    };
+  }
+
+  /**
+   * 获取可用 Skills 列表（用于注入 System Prompt）
+   */
+  getAvailableSkills(): SkillMeta[] {
+    return Array.from(this.skillsCache.values());
+  }
+
+  /**
+   * 生成 Skills 列表描述（注入 System Prompt）
+   */
+  generateSkillsPrompt(): string {
+    const skills = this.getAvailableSkills();
+    if (skills.length === 0) {
+      return '';
+    }
+
+    let prompt = '\n## 可用 Skills\n\n';
+    prompt += '以下是可用的 Skills，你可以使用 Skill 工具调用它们：\n\n';
+    
+    for (const skill of skills) {
+      prompt += `- **${skill.name}**: ${skill.description}\n`;
+    }
+    
+    prompt += '\n当用户发送 `/skill-name` 或你判断当前任务匹配某个 skill 时，使用 Skill 工具加载完整指令。\n';
+    
+    return prompt;
+  }
+
+  /**
+   * 读取指定 Skill 的完整内容
+   */
+  async loadSkillContent(skillName: string): Promise<SkillContent> {
+    const meta = this.skillsCache.get(skillName);
+    
+    if (!meta) {
+      throw new Error(`Skill not found: ${skillName}`);
+    }
+
+    const content = await fs.readFile(meta.path, 'utf-8');
+    
+    // 移除 frontmatter，只返回正文内容
+    const bodyMatch = content.match(/^---\n[\s\S]*?\n---\n([\s\S]*)$/);
+    const body = bodyMatch ? bodyMatch[1].trim() : content;
+
+    return {
+      name: meta.name,
+      description: meta.description,
+      content: body,
+      source: meta.source,
+      path: meta.path
+    };
+  }
+
+  /**
+   * 检查 Skill 是否存在
+   */
+  hasSkill(skillName: string): boolean {
+    return this.skillsCache.has(skillName);
+  }
+}
+```
+
+#### Skills 触发方式
+
+**1. 用户主动调用**
+
+用户通过飞书发送 `/skill-name` 格式的消息触发 Skill：
+
+```
+用户: "/feishu-bitable"
+
+系统: 加载 feishu-bitable skill，并按照 skill 内容执行任务
+```
+
+**消息预处理逻辑**：
+
+```typescript
+function preprocessMessage(message: string): { type: 'skill' | 'normal', skillName?: string, content: string } {
+  const skillMatch = message.match(/^\/([a-zA-Z0-9_-]+)(?:\s+(.*))?$/);
+  
+  if (skillMatch) {
+    return {
+      type: 'skill',
+      skillName: skillMatch[1],
+      content: skillMatch[2] || ''
+    };
+  }
+  
+  return { type: 'normal', content: message };
+}
+```
+
+**2. Claude 自动调用**
+
+Claude 根据任务内容判断是否需要调用某个 Skill，通过 Skill 工具主动调用：
+
+```
+用户: "帮我把这些数据写入飞书表格"
+
+Claude（内部）: 判断此任务匹配 feishu-bitable skill
+             → 调用 Skill 工具: { "skill": "feishu-bitable" }
+             → 获取完整 skill 内容
+             → 按照 skill 指令执行任务
+```
+
+#### 预置 Skills
+
+系统应预置一些常用 Skills 到全局目录（`~/.claude/skills/`），让所有会话都能使用。预置 Skills 作为示例，具体内容后续单独创建：
+
+| Skill | 用途 | 说明 |
+|-------|------|------|
+| **feishu-bitable** | 飞书多维表格操作 | 读取、写入、更新表格数据 |
+| **server-monitor** | 服务器监控 | 检查 CPU、内存、磁盘、进程 |
+| **git-operations** | Git 操作 | 提交、推送、拉取、合并 |
+| **docker-manage** | Docker 管理 | 容器启停、镜像管理 |
+| **data-collector** | 数据采集 | 网页爬取、API 调用 |
 
 #### 自定义 Skills
 
@@ -224,7 +448,6 @@ description: 操作飞书多维表格
       3. 返回 JSON 格式数据
 
       所有会话都可以使用这个 Skill"
-```
 
 ### Agent 工具集
 
@@ -239,6 +462,7 @@ Agent 需要具备以下工具：
 | **Glob** | 文件模式匹配 | Glob tool |
 | **Grep** | 内容搜索 | Grep tool |
 | **WebFetch** | HTTP 请求 | WebFetch tool |
+| **Skill** | 加载并执行 Skill | Skill tool |
 
 **实现方式**：使用 Claude Agent SDK 的工具定义功能，并实现对应的工具执行器。
 
@@ -451,6 +675,31 @@ interface AskUserQuestionOutput {
 }
 ```
 
+#### 11. Skill 工具
+
+```typescript
+interface SkillInput {
+  skill: string;             // Skill 名称（必填），如 "feishu-bitable" 或 "commit"
+  args?: string;             // 可选参数，传递给 skill 的额外信息
+}
+
+interface SkillOutput {
+  name: string;              // Skill 名称
+  description: string;       // Skill 描述
+  content: string;           // Skill 完整内容（markdown）
+  source: 'global' | 'project';  // 来源：全局或项目级
+  path: string;              // Skill 文件路径
+}
+```
+
+**工具描述（注入给 Claude 的）**：
+
+```
+调用指定的 Skill。当用户发送 /skill-name 或你判断当前任务匹配某个 skill 时，使用此工具加载 skill 的完整指令。调用后，按照返回的 skill 内容执行任务。
+
+可用 Skills 列表会在会话开始时提供。只能调用列表中存在的 skill。
+```
+
 ### 工具执行器实现
 
 **文件**: `src/executors/tool-executor.ts`
@@ -461,15 +710,32 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { glob } from 'glob';
 import { promisify } from 'util';
+import { SkillLoader } from '../skills/skill-loader';
 
 const execAsync = promisify(exec);
 
 export class ToolExecutor {
   private workingDir: string;
   private bashSessions: Map<string, any> = new Map();
+  private skillLoader: SkillLoader;
 
-  constructor(workingDir: string) {
+  constructor(workingDir: string, homeDir: string = process.env.HOME || '~') {
     this.workingDir = workingDir;
+    this.skillLoader = new SkillLoader(homeDir, workingDir);
+  }
+
+  /**
+   * 初始化工具执行器（扫描 Skills）
+   */
+  async init(): Promise<void> {
+    await this.skillLoader.scanSkills();
+  }
+
+  /**
+   * 获取 Skills 列表提示（用于注入 System Prompt）
+   */
+  getSkillsPrompt(): string {
+    return this.skillLoader.generateSkillsPrompt();
   }
 
   /**
@@ -493,6 +759,8 @@ export class ToolExecutor {
         return this.executeWebFetch(input);
       case 'TodoWrite':
         return this.executeTodoWrite(input);
+      case 'Skill':
+        return this.executeSkill(input);
       default:
         throw new Error(`Unknown tool: ${toolName}`);
     }
@@ -707,6 +975,27 @@ export class ToolExecutor {
 
   private escapeRegex(string: string): string {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  /**
+   * Skill 加载执行
+   */
+  private async executeSkill(input: SkillInput): Promise<SkillOutput> {
+    const skillName = input.skill;
+    
+    if (!this.skillLoader.hasSkill(skillName)) {
+      throw new Error(`Skill not found: ${skillName}. Available skills: ${this.skillLoader.getAvailableSkills().map(s => s.name).join(', ')}`);
+    }
+
+    const skillContent = await this.skillLoader.loadSkillContent(skillName);
+    
+    return {
+      name: skillContent.name,
+      description: skillContent.description,
+      content: skillContent.content,
+      source: skillContent.source,
+      path: skillContent.path
+    };
   }
 }
 ```
@@ -1972,11 +2261,21 @@ export class ClaudeMdLoader {
 | **B: Agent SDK** | 使用官方 SDK 重新设计 | 官方支持，可控，快速 | 需要理解 SDK | ✅ **推荐** |
 | **C: 插件扩展** | 通过插件扩展 Claude Code | 利用现有生态 | 无法 24/7 独立运行 | ⚠️ 辅助方案 |
 
+### 开发语言要求
+
+> 📝 **全项目使用 TypeScript**
+>
+> CloudClaude 整个项目必须使用 **TypeScript** 语言编写，不允许使用纯 JavaScript。这样可以获得：
+> - ✅ 编译时类型检查，减少运行时错误
+> - ✅ 更好的 IDE 支持（自动补全、重构）
+> - ✅ 代码可读性和可维护性
+> - ✅ 与 Anthropic SDK 的完整类型定义匹配
+
 ### 技术栈
 
 | 组件 | 技术 | 版本 | 说明 |
 |------|------|------|------|
-| **语言** | TypeScript | ^5.3.0 | 类型安全的 JavaScript |
+| **语言** | TypeScript | ^5.3.0 | 类型安全的 JavaScript（**必须**） |
 | **运行时** | Node.js | 18+ | 服务器端 JavaScript |
 | **核心 SDK** | @anthropic-ai/sdk | ^0.30.0 | Claude Agent SDK（完整类型定义） |
 | **Web 框架** | Express | ^4.18.2 | HTTP 服务器 |
@@ -2418,38 +2717,124 @@ async executeInSession(sessionId, instruction) {
 
 ### 4. Task Scheduler (任务调度器)
 
-**文件**: `src/scheduler/task-scheduler.js`
+**文件**: `src/scheduler/task-scheduler.ts`
 
 **职责**:
 - 加载和调度定时任务
 - 执行任务并发送通知
 - 管理任务生命周期
 
-**工作流程**:
+#### 定时任务实现机制
 
-```javascript
-// 初始化时加载所有任务
-init() {
-  const tasks = loadTasks();
-  tasks.tasks.forEach(task => {
-    if (task.enabled) {
-      cron.schedule(task.cron, () => this.executeTask(task));
+> ❓ **常见问题**：定时任务需要手动写循环检查吗？
+>
+> ✅ **不需要**。CloudClaude 使用 `node-cron` 库，它基于 Node.js 的事件循环（Event Loop）自动处理定时检查。
+
+**node-cron 工作原理**：
+
+```
+1. cron.schedule() 注册定时任务
+   ↓
+2. node-cron 内部使用 setTimeout/setInterval
+   ↓
+3. Node.js Event Loop 自动检查定时器
+   ↓
+4. 时间到达时自动触发回调函数
+```
+
+| 特性 | 说明 |
+|------|------|
+| **无需手动轮询** | Node.js Event Loop 自动管理定时器 |
+| **低 CPU 占用** | 不是循环检查，而是事件驱动 |
+| **Cron 语法** | 支持标准 Unix Cron 表达式（如 `0 12 * * *`） |
+| **进程常驻** | 只要主进程运行，定时任务就会按时触发 |
+
+**工作流程**：
+
+```typescript
+import cron from 'node-cron';
+import { FeishuAdapter } from '../adapters/feishu-adapter';
+import { SessionManager } from '../session/session-manager';
+import { Task, TasksConfig } from '../types';
+import * as fs from 'fs/promises';
+
+export class TaskScheduler {
+  private adapter: FeishuAdapter;
+  private sessionManager: SessionManager;
+  private scheduledTasks: Map<string, cron.ScheduledTask> = new Map();
+
+  constructor(adapter: FeishuAdapter, sessionManager: SessionManager) {
+    this.adapter = adapter;
+    this.sessionManager = sessionManager;
+  }
+
+  /**
+   * 初始化：加载并注册所有定时任务
+   * 注册后，node-cron 会自动在 Node.js Event Loop 中管理定时器
+   * 无需手动编写循环检查代码
+   */
+  async init(): Promise<void> {
+    const tasksConfig = await this.loadTasks();
+    
+    for (const task of tasksConfig.tasks) {
+      if (task.enabled) {
+        // cron.schedule 内部使用 Node.js 的定时器机制
+        // 时间到达时会自动触发回调函数
+        const scheduledTask = cron.schedule(task.cron, () => {
+          this.executeTask(task);
+        });
+        
+        this.scheduledTasks.set(task.id, scheduledTask);
+        console.log(`✅ 定时任务已注册: ${task.name} (${task.cron})`);
+      }
     }
-  });
-}
+  }
 
-// 执行任务
-async executeTask(task) {
-  // 1. 发送开始通知
-  await this.adapter.sendMessage(`⏰ 定时任务开始：${task.name}`);
+  /**
+   * 加载任务配置
+   */
+  private async loadTasks(): Promise<TasksConfig> {
+    const content = await fs.readFile('config/tasks.json', 'utf-8');
+    return JSON.parse(content);
+  }
 
-  // 2. 执行任务
-  const result = await this.sessionManager.executeEphemeralTask(task);
+  /**
+   * 执行定时任务
+   */
+  async executeTask(task: Task): Promise<void> {
+    try {
+      // 1. 发送开始通知
+      await this.adapter.sendMessage(`⏰ 定时任务开始：${task.name}`);
 
-  // 3. 发送完成通知
-  await this.adapter.sendMessage(`✅ 定时任务完成：${task.name}\n\n${result}`);
+      // 2. 执行任务（创建临时 Session，具备完整 Agent 能力）
+      const result = await this.sessionManager.executeEphemeralTask(task);
+
+      // 3. 发送完成通知
+      await this.adapter.sendMessage(`✅ 定时任务完成：${task.name}\n\n${result}`);
+    } catch (error: any) {
+      // 错误处理
+      await this.adapter.sendMessage(`❌ 定时任务失败：${task.name}\n错误: ${error.message}`);
+    }
+  }
+
+  /**
+   * 停止所有定时任务
+   */
+  stopAll(): void {
+    for (const [taskId, scheduledTask] of this.scheduledTasks) {
+      scheduledTask.stop();
+      console.log(`⏹️ 定时任务已停止: ${taskId}`);
+    }
+    this.scheduledTasks.clear();
+  }
 }
 ```
+
+**关键说明**：
+
+1. **无需手动检查**：`cron.schedule()` 注册后，Node.js Event Loop 会自动维护定时器
+2. **进程常驻要求**：主进程必须保持运行（通过 Express 服务器或 PM2 实现）
+3. **不占用 CPU**：基于事件驱动，不是循环轮询
 
 ### 5. Webhook Server (HTTP 服务器)
 
