@@ -16,7 +16,7 @@ export function Sidebar() {
     return (
         <aside className="glass-sidebar w-56 h-screen fixed left-0 top-0 flex flex-col">
             <div className="p-4 border-b border-black/5">
-                <h1 className="text-xl font-bold text-gray-800">☁️ CloudClaude</h1>
+                <h1 className="text-xl font-bold text-gray-800">☁️ Cloud Code</h1>
             </div>
 
             <nav className="flex-1 p-3 space-y-1">
@@ -29,8 +29,8 @@ export function Sidebar() {
                             key={item.href}
                             href={item.href}
                             className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${isActive
-                                    ? 'bg-white/80 shadow-sm font-medium'
-                                    : 'hover:bg-white/50'
+                                ? 'bg-white/80 shadow-sm font-medium'
+                                : 'hover:bg-white/50'
                                 }`}
                         >
                             <span>{item.icon}</span>
@@ -41,7 +41,7 @@ export function Sidebar() {
             </nav>
 
             <div className="p-4 border-t border-black/5 text-xs text-gray-500">
-                <p>CloudClaude v1.0</p>
+                <p>Cloud Code v1.0</p>
             </div>
         </aside>
     );
