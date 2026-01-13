@@ -1,0 +1,17 @@
+server:
+  port: 3004
+  host: 0.0.0.0
+
+feishu:
+  appId: "cli_mock_app_id"
+  appSecret: "mock_secret"
+  encryptKey: "mock_key"
+  verificationToken: "mock_token"
+
+claude:
+  apiKey: "eddef13f9b804203943dd2f1be167586.gvo88edPHYaQllQ8"
+  model: "claude-3-opus-20240229"
+  baseURL: "https://open.bigmodel.cn/api/anthropic"
+
+workspace:
+  root: "./workspace"
