@@ -19,7 +19,7 @@ export function Sidebar() {
         <div className="w-64 h-full glass-sidebar flex flex-col p-4">
             <div className="mb-8 px-4 py-2">
                 <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
-                    CloudClaude
+                    Cloud Code
                 </h1>
             </div>
 
