@@ -1,0 +1,38 @@
+{
+    "permissions": {
+        "deny": [
+            "Bash(rm -rf /)",
+            "Bash(rm -rf ~)",
+            "Bash(dd if=*)",
+            "Bash(mkfs.*)",
+            "Bash(shutdown*)",
+            "Bash(reboot*)",
+            "Read(/etc/shadow)",
+            "Write(/etc/*)",
+            "Write(/usr/*)",
+            "Write(/bin/*)"
+        ],
+        "allow": [
+            "Read(**)",
+            "Glob(**)",
+            "Grep(**)",
+            "Skill(**)",
+            "Bash(ls *)",
+            "Bash(cat *)",
+            "Bash(pwd)",
+            "Bash(whoami)",
+            "Bash(npm *)",
+            "Bash(node *)",
+            "Bash(python *)",
+            "Bash(git *)"
+        ],
+        "ask": [
+            "Bash(apt *)",
+            "Bash(pip install *)",
+            "Bash(curl * | *)",
+            "Bash(wget *)",
+            "Write(**)",
+            "Edit(**)"
+        ]
+    }
+}
