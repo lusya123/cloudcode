@@ -8,19 +8,23 @@ const config: Config = {
     ],
     theme: {
         extend: {
+            fontFamily: {
+                sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'Segoe UI', 'sans-serif'],
+            },
             colors: {
-                glass: {
-                    light: 'rgba(255, 255, 255, 0.7)',
-                    dark: 'rgba(247, 247, 247, 0.8)',
-                }
+                gray: {
+                    50: '#F9FAFB',
+                    100: '#F3F4F6',
+                    200: '#E5E7EB',
+                    300: '#D1D5DB',
+                    400: '#9CA3AF',
+                    500: '#6B7280',
+                    600: '#4B5563',
+                    700: '#374151',
+                    800: '#1F2937',
+                    900: '#111827',
+                },
             },
-            backdropBlur: {
-                glass: '20px',
-            },
-            boxShadow: {
-                glass: '0 8px 32px rgba(0, 0, 0, 0.08)',
-                'glass-hover': '0 12px 40px rgba(0, 0, 0, 0.12)',
-            }
         },
     },
     plugins: [],

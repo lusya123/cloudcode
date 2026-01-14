@@ -6,7 +6,7 @@ import { Message } from '@/lib/types';
 import { sendMessage, getSessions, getSessionMessages } from '@/lib/api';
 
 interface ChatBoxProps {
-    sessionId?: string;  // Optional: If provided, load messages for this specific session
+    sessionId?: string;
 }
 
 export function ChatBox({ sessionId: propSessionId }: ChatBoxProps) {
@@ -16,26 +16,19 @@ export function ChatBox({ sessionId: propSessionId }: ChatBoxProps) {
     const [sessionId, setSessionId] = useState<string | null>(propSessionId || null);
     const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
-    // Load session and messages on mount or when sessionId prop changes
     const loadSessionAndMessages = useCallback(async () => {
         setIsLoadingHistory(true);
         try {
             let targetSessionId = propSessionId;
-
-            // If no specific session provided, get the active session
             if (!targetSessionId) {
                 const sessionsData = await getSessions();
                 targetSessionId = sessionsData.activeId;
             }
-
             if (targetSessionId) {
                 setSessionId(targetSessionId);
-
-                // Load messages for the session
                 try {
                     const messagesData = await getSessionMessages(targetSessionId);
                     if (messagesData.messages && messagesData.messages.length > 0) {
-                        // Convert backend messages to frontend format
                         const formattedMessages: Message[] = messagesData.messages.map((m: any) => ({
                             role: m.role === 'assistant' ? 'assistant' : 'user',
                             content: typeof m.content === 'string'
@@ -48,8 +41,6 @@ export function ChatBox({ sessionId: propSessionId }: ChatBoxProps) {
                         setMessages([]);
                     }
                 } catch {
-                    // Session exists but no messages yet, that's ok
-                    console.log('No messages found for session');
                     setMessages([]);
                 }
             }
@@ -79,29 +70,22 @@ export function ChatBox({ sessionId: propSessionId }: ChatBoxProps) {
 
         try {
             const response = await sendMessage(userMessage.content, sessionId || undefined);
-
             const assistantMessage: Message = {
                 role: 'assistant',
                 content: response.reply || response.result || '处理完成',
                 timestamp: new Date().toISOString()
             };
-
             setMessages(prev => [...prev, assistantMessage]);
-
-            // Update sessionId if returned (especially for new sessions)
             if (response.sessionId) {
                 setSessionId(response.sessionId);
             }
-
-            // If a new session was created, clear messages for clean start
             if (response.isNewSession) {
-                // Keep only the current exchange for the new session
                 setMessages([userMessage, assistantMessage]);
             }
-        } catch (error) {
+        } catch {
             const errorMessage: Message = {
                 role: 'assistant',
-                content: '❌ 请求失败，请稍后重试',
+                content: '请求失败，请稍后重试',
                 timestamp: new Date().toISOString()
             };
             setMessages(prev => [...prev, errorMessage]);
@@ -120,7 +104,7 @@ export function ChatBox({ sessionId: propSessionId }: ChatBoxProps) {
     if (isLoadingHistory) {
         return (
             <div className="flex flex-col h-full items-center justify-center">
-                <div className="text-gray-400">加载消息历史...</div>
+                <div className="text-[13px] text-gray-400">加载中...</div>
             </div>
         );
     }
@@ -129,28 +113,30 @@ export function ChatBox({ sessionId: propSessionId }: ChatBoxProps) {
         <div className="flex flex-col h-full min-h-0 overflow-hidden">
             <MessageList messages={messages} />
 
-            <div className="p-4 border-t border-black/5 bg-white/50 flex-shrink-0">
-                <div className="flex gap-3">
-                    <textarea
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder="发送消息给 CloudClaude..."
-                        className="flex-1 glass-input px-4 py-3 resize-none"
-                        rows={1}
-                        disabled={isLoading}
-                    />
-                    <button
-                        onClick={handleSend}
-                        disabled={isLoading || !input.trim()}
-                        className="glass-button px-6"
-                    >
-                        {isLoading ? '⏳' : '发送'}
-                    </button>
+            <div className="border-t border-gray-200 bg-white">
+                <div className="max-w-2xl mx-auto px-6 py-4">
+                    <div className="flex gap-3 items-end">
+                        <textarea
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder="输入消息..."
+                            className="flex-1 px-4 py-3 text-[14px] border border-gray-200 rounded-xl resize-none focus:outline-none focus:border-gray-400 transition-colors bg-gray-50 placeholder:text-gray-400"
+                            rows={1}
+                            disabled={isLoading}
+                        />
+                        <button
+                            onClick={handleSend}
+                            disabled={isLoading || !input.trim()}
+                            className="h-11 px-5 bg-gray-900 text-white text-[13px] font-medium rounded-xl hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                        >
+                            {isLoading ? '发送中' : '发送'}
+                        </button>
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-2">
+                        Enter 发送 · Shift + Enter 换行
+                    </p>
                 </div>
-                <p className="text-xs text-gray-400 mt-2">
-                    按 Enter 发送，Shift + Enter 换行
-                </p>
             </div>
         </div>
     );

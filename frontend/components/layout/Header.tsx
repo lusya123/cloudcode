@@ -9,28 +9,20 @@ export function Header() {
     });
 
     return (
-        <header className="h-14 border-b border-black/5 bg-white/50 backdrop-blur-sm flex items-center justify-between px-6">
-            <div className="flex items-center gap-4">
-                <h2 className="text-lg font-semibold text-gray-700">
-                    {/* Page title can be set via context or props */}
-                </h2>
-            </div>
-
-            <div className="flex items-center gap-4">
+        <header className="h-14 border-b border-gray-200 flex items-center justify-end px-6 bg-white">
+            <div className="flex items-center gap-4 text-[13px]">
                 {status && (
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-green-400"></span>
-                            运行中
-                        </span>
-                        <span>⏱️ {status.uptime}</span>
-                        <span>📁 {status.activeSessions} 会话</span>
-                    </div>
+                    <>
+                        <div className="flex items-center gap-2 text-gray-500">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span>运行中</span>
+                        </div>
+                        <span className="text-gray-300">|</span>
+                        <span className="text-gray-500">{status.uptime}</span>
+                        <span className="text-gray-300">|</span>
+                        <span className="text-gray-500">{status.activeSessions} 会话</span>
+                    </>
                 )}
-
-                <button className="p-2 hover:bg-black/5 rounded-lg transition-colors">
-                    ⚙️
-                </button>
             </div>
         </header>
     );

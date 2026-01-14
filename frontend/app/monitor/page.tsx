@@ -10,74 +10,48 @@ export default function MonitorPage() {
         refreshInterval: 5000
     });
 
-    // Calculate memory percentage
     const memoryUsed = status?.memory?.heapUsed || 0;
     const memoryTotal = status?.memory?.heapTotal || 1;
     const memoryPercent = (memoryUsed / memoryTotal) * 100;
 
     return (
-        <div className="p-6 space-y-6">
-            <div className="mb-6">
-                <h1 className="text-xl font-semibold text-gray-800">📊 系统监控</h1>
-                <p className="text-sm text-gray-500 mt-1">
-                    实时查看系统状态和资源使用
-                </p>
+        <div className="max-w-2xl mx-auto px-6 py-8">
+            <h1 className="text-[22px] font-semibold text-gray-900 tracking-tight">系统监控</h1>
+            <p className="text-[13px] text-gray-500 mt-1">实时查看系统状态</p>
+
+            <div className="mt-10">
+                <StatusCard />
             </div>
 
-            {/* Status Cards */}
-            <StatusCard />
-
-            {/* Resource Usage */}
-            <div>
-                <h2 className="text-lg font-semibold text-gray-700 mb-4">资源使用</h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <MetricsChart
-                        label="内存使用"
-                        value={memoryPercent}
-                        color="#2383e2"
-                    />
-                    <MetricsChart
-                        label="会话占用"
-                        value={(status?.activeSessions || 0) * 33.33}
-                        color="#10b981"
-                    />
-                    <MetricsChart
-                        label="任务负载"
-                        value={Math.min((status?.taskCount || 0) * 10, 100)}
-                        color="#8b5cf6"
-                    />
+            <div className="mt-12">
+                <h2 className="text-[15px] font-medium text-gray-900 mb-6">资源使用</h2>
+                <div className="space-y-6">
+                    <MetricsChart label="内存使用" value={memoryPercent} />
+                    <MetricsChart label="会话占用" value={(status?.activeSessions || 0) * 33.33} />
+                    <MetricsChart label="任务负载" value={Math.min((status?.taskCount || 0) * 10, 100)} />
                 </div>
             </div>
 
-            {/* System Info */}
-            <div>
-                <h2 className="text-lg font-semibold text-gray-700 mb-4">系统信息</h2>
-                <div className="glass-card p-4 space-y-2 text-sm">
-                    <div className="flex justify-between">
-                        <span className="text-gray-500">运行时间</span>
-                        <span className="font-medium">{status?.uptime || '-'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-500">活跃会话</span>
-                        <span className="font-medium">{status?.activeSessions || 0}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-500">定时任务</span>
-                        <span className="font-medium">{status?.taskCount || 0}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-500">内存使用</span>
-                        <span className="font-medium">
-                            {(memoryUsed / 1024 / 1024).toFixed(1)} MB / {(memoryTotal / 1024 / 1024).toFixed(1)} MB
-                        </span>
-                    </div>
+            <div className="mt-12">
+                <h2 className="text-[15px] font-medium text-gray-900 mb-4">系统信息</h2>
+                <div className="space-y-3">
+                    {[
+                        { label: '运行时间', value: status?.uptime || '-' },
+                        { label: '活跃会话', value: status?.activeSessions || 0 },
+                        { label: '定时任务', value: status?.taskCount || 0 },
+                        { label: '内存使用', value: `${(memoryUsed / 1024 / 1024).toFixed(1)} MB / ${(memoryTotal / 1024 / 1024).toFixed(1)} MB` },
+                    ].map(item => (
+                        <div key={item.label} className="flex justify-between py-2 border-b border-gray-100">
+                            <span className="text-[13px] text-gray-500">{item.label}</span>
+                            <span className="text-[13px] font-medium text-gray-900">{item.value}</span>
+                        </div>
+                    ))}
                 </div>
             </div>
 
-            {/* Status Indicator */}
-            <div className="glass-card p-4 flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></span>
-                <span className="text-sm text-gray-600">系统运行正常</span>
+            <div className="mt-8 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span className="text-[13px] text-gray-500">系统运行正常</span>
             </div>
         </div>
     );

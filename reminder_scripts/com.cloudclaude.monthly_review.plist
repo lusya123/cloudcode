@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.cloudclaude.monthly_review</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/xuehongyu/Downloads/cloudclaude/reminder_scripts/monthly_review.sh</string>
+    </array>
+    
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Day</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>10</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    
+    <key>StandardOutPath</key>
+    <string>/tmp/monthly_review_reminder.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/tmp/monthly_review_reminder.err</string>
+</dict>
+</plist>

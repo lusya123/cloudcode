@@ -11,31 +11,31 @@ export function StatusCard() {
 
     if (!status) {
         return (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-8 animate-pulse">
                 {[1, 2, 3].map(i => (
-                    <div key={i} className="glass-card p-4 text-center animate-pulse">
-                        <div className="h-8 bg-gray-200 rounded mb-2"></div>
-                        <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                    <div key={i}>
+                        <div className="h-8 bg-gray-100 rounded w-16 mb-2"></div>
+                        <div className="h-4 bg-gray-100 rounded w-20"></div>
                     </div>
                 ))}
             </div>
         );
     }
 
+    const items = [
+        { label: '运行时间', value: status.uptime },
+        { label: '活跃会话', value: status.activeSessions },
+        { label: '定时任务', value: status.taskCount },
+    ];
+
     return (
-        <div className="grid grid-cols-3 gap-4">
-            <div className="glass-card p-4 text-center">
-                <p className="text-2xl font-bold text-gray-800">{status.uptime}</p>
-                <p className="text-sm text-gray-500">运行时间</p>
-            </div>
-            <div className="glass-card p-4 text-center">
-                <p className="text-2xl font-bold text-gray-800">{status.activeSessions}</p>
-                <p className="text-sm text-gray-500">活跃会话</p>
-            </div>
-            <div className="glass-card p-4 text-center">
-                <p className="text-2xl font-bold text-gray-800">{status.taskCount}</p>
-                <p className="text-sm text-gray-500">定时任务</p>
-            </div>
+        <div className="grid grid-cols-3 gap-8">
+            {items.map((item) => (
+                <div key={item.label}>
+                    <p className="text-[28px] font-semibold text-gray-900 tracking-tight">{item.value}</p>
+                    <p className="text-[13px] text-gray-500 mt-1">{item.label}</p>
+                </div>
+            ))}
         </div>
     );
 }
