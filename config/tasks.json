@@ -1,0 +1,76 @@
+{
+  "tasks": [
+    {
+      "id": "task_891c76ae-4853-44ad-bdc4-0422e4691fec",
+      "name": "Scheduled Task",
+      "cron": "15 9 * * *",
+      "enabled": true,
+      "instruction": "Schedule a task daily at 9:15 AM in /Users/xuehongyu/Downloads/cloudcode-prompt to read data/agent_write_test.txt with the Read tool and reply with the file contents.",
+      "workingDir": "/Users/xuehongyu/Downloads/cloudcode-prompt",
+      "context": {
+        "chatId": "session_707565d6-c029-4707-b22c-bfcdb2c15a12"
+      },
+      "createdAt": "2026-01-13T20:06:10.433Z"
+    },
+    {
+      "id": "task_f1008aa4-91c3-4ec2-a139-4fe4ac4f869f",
+      "name": "Scheduled Task",
+      "cron": "30 9 * * *",
+      "enabled": true,
+      "instruction": "Schedule a task daily at 9:30 AM in /Users/xuehongyu/Downloads/cloudcode-prompt. The task must ONLY use the Read tool (no Write/Edit) to read data/agent_write_test.txt and reply with the file contents.",
+      "workingDir": "/Users/xuehongyu/Downloads/cloudcode-prompt.",
+      "context": {
+        "chatId": "session_707565d6-c029-4707-b22c-bfcdb2c15a12"
+      },
+      "createdAt": "2026-01-13T20:07:10.754Z"
+    },
+    {
+      "id": "task_865c9172-04f2-4048-837c-10595eaf5896",
+      "name": "Scheduled Task",
+      "cron": "35 9 * * *",
+      "enabled": true,
+      "instruction": "Schedule a task daily at 9:35 AM in /Users/xuehongyu/Downloads/cloudcode-prompt to ONLY use the Read tool to read data/agent_write_test.txt and reply with the file contents",
+      "workingDir": "/Users/xuehongyu/Downloads/cloudcode-prompt",
+      "context": {
+        "chatId": "session_707565d6-c029-4707-b22c-bfcdb2c15a12"
+      },
+      "createdAt": "2026-01-13T20:07:27.539Z"
+    },
+    {
+      "id": "task_6fbb17e9-a135-4713-ba84-30ce806dc31a",
+      "name": "Scheduled Task",
+      "cron": "40 9 * * *",
+      "enabled": true,
+      "instruction": "Schedule a task daily at 9:40 AM in /Users/xuehongyu/Downloads/cloudcode-prompt to reply with exactly: TASK_OK",
+      "workingDir": "/Users/xuehongyu/Downloads/cloudcode-prompt",
+      "context": {
+        "chatId": "session_707565d6-c029-4707-b22c-bfcdb2c15a12"
+      },
+      "createdAt": "2026-01-13T20:08:33.166Z"
+    },
+    {
+      "id": "task_55c2abd7-96cd-43b2-8be1-23653af0d7f0",
+      "name": "Scheduled Task",
+      "cron": "0 0 * * *",
+      "enabled": true,
+      "instruction": "0 0 * * * /Users/xuehongyu/Downloads/cloudcode-prompt Reply with exactly TASK_OK",
+      "workingDir": "/Users/xuehongyu/Downloads/cloudcode-prompt",
+      "context": {
+        "chatId": "session_707565d6-c029-4707-b22c-bfcdb2c15a12"
+      },
+      "createdAt": "2026-01-13T20:11:41.849Z"
+    },
+    {
+      "id": "task_dcb34367-91cb-4850-a853-005c6391573e",
+      "name": "Scheduled Task",
+      "cron": "0 18 * * *",
+      "enabled": true,
+      "instruction": "设定一个每天下午6点钟采集数据的定时任务",
+      "workingDir": "/Users/xuehongyu/Downloads/cloudcode-prompt",
+      "context": {
+        "chatId": "session_707565d6-c029-4707-b22c-bfcdb2c15a12"
+      },
+      "createdAt": "2026-01-14T03:31:08.544Z"
+    }
+  ]
+}

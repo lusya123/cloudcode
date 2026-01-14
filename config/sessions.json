@@ -1,0 +1,23 @@
+{
+  "lastActive": "session_707565d6-c029-4707-b22c-bfcdb2c15a12",
+  "sessions": [
+    {
+      "id": "session_c785a122-790e-4c39-ba79-f755d2a64b35",
+      "name": "Default Session",
+      "type": "interactive",
+      "workingDir": "/Users/xuehongyu/Downloads/cloudcode-prompt",
+      "createdAt": "2026-01-13T19:31:57.563Z",
+      "lastUsed": "2026-01-13T19:31:57.563Z",
+      "messageCount": 0
+    },
+    {
+      "id": "session_707565d6-c029-4707-b22c-bfcdb2c15a12",
+      "name": "New Session",
+      "type": "project",
+      "workingDir": "/Users/xuehongyu/Downloads/cloudcode-prompt",
+      "createdAt": "2026-01-13T19:58:20.202Z",
+      "lastUsed": "2026-01-14T03:26:56.981Z",
+      "messageCount": 24
+    }
+  ]
+}
