@@ -17,6 +17,11 @@ export const createApp = (config: Config) => {
 
     // Core Components
     const sessionManager = new SessionManager(config.workspace.root);
+    // Restore sessions from disk
+    sessionManager.loadSessions().catch(err => {
+        logger.error('Failed to restore sessions:', err);
+    });
+
     const scheduler = new TaskScheduler();
     const gateway = new GatewayAgent(config, sessionManager, scheduler);
 

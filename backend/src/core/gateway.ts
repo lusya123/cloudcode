@@ -58,12 +58,14 @@ export class GatewayAgent {
       Capabilities:
       - You can execute Bash commands, read/write files, and more.
       - You can manage scheduled tasks.
+      - You can switch the underlying AI model using the SwitchModel tool.
       - You act as a pair programmer or system administrator.
       
       ${skillsPrompt}
       
       When using tools, you must output the exact tool call.
       If you need to ask the user a clarifying question, just ask.
+      IMPORTANT: You support dynamic model switching. If the user asks to switch models, even to a custom one, use the SwitchModel tool immediately.
       `;
 
             // 4. Agentic Loop (Max 10 turns)
@@ -77,10 +79,22 @@ export class GatewayAgent {
             let loopMessages = history.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
             while (currentTurn < maxTurns) {
+                // Determine client and model to use for this turn
+                let client = this.anthropic;
+                let model = this.config.claude.model;
+
+                if (session.currentModel) {
+                    client = new Anthropic({
+                        apiKey: session.currentModel.apiKey || this.config.claude.apiKey,
+                        baseURL: session.currentModel.baseURL || this.config.claude.baseURL
+                    });
+                    model = session.currentModel.name;
+                }
+
                 currentTurn++;
 
-                const response = await this.anthropic.messages.create({
-                    model: this.config.claude.model,
+                const response = await client.messages.create({
+                    model: model,
                     max_tokens: 4096,
                     system: systemPrompt,
                     messages: loopMessages,
@@ -141,6 +155,19 @@ export class GatewayAgent {
                                 properties: {},
                                 required: []
                             }
+                        },
+                        {
+                            name: 'SwitchModel',
+                            description: 'Switch the LLM model. Use this when the user asks to switch model or configure a new model.',
+                            input_schema: {
+                                type: 'object',
+                                properties: {
+                                    model: { type: 'string', description: 'The model name (e.g. claude-3-opus, gpt-4, or a custom name)' },
+                                    baseURL: { type: 'string', description: 'Optional base URL for the model API' },
+                                    apiKey: { type: 'string', description: 'Optional API Key for the model' }
+                                },
+                                required: ['model']
+                            }
                         }
                     ]
                 });
@@ -182,6 +209,17 @@ export class GatewayAgent {
                                     sessionId: newSession.id
                                 };
                                 redirectSessionId = newSession.id;
+                            } else if (toolUse.name === 'SwitchModel') {
+                                logger.info('Executing tool: SwitchModel', toolUse.input);
+                                session.currentModel = {
+                                    name: toolUse.input.model,
+                                    baseURL: toolUse.input.baseURL,
+                                    apiKey: toolUse.input.apiKey
+                                };
+                                result = {
+                                    status: 'success',
+                                    message: `Model switched to ${toolUse.input.model}. Configuration saved for this session.`
+                                };
                             } else {
                                 result = await executor.execute(toolUse.name, toolUse.input);
                             }

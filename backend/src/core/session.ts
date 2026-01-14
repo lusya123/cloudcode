@@ -19,6 +19,11 @@ export interface Session {
     lastUsed: number;
     messages: Message[];
     status: 'active' | 'archived';
+    currentModel?: {
+        name: string;
+        apiKey?: string;
+        baseURL?: string;
+    };
 }
 
 export class SessionManager {
@@ -37,6 +42,7 @@ export class SessionManager {
         if (sessionId && this.sessions.has(sessionId)) {
             const session = this.sessions.get(sessionId)!;
             session.lastUsed = Date.now();
+            await this.saveSession(session);
             return session;
         }
 
@@ -61,6 +67,7 @@ export class SessionManager {
         };
 
         this.sessions.set(id, session);
+        await this.saveSession(session);
 
         // Initialize executor for this session
         const executor = new ToolExecutor(workingDir);
@@ -74,7 +81,7 @@ export class SessionManager {
     /**
      * Add message to history
      */
-    addMessage(sessionId: string, role: 'user' | 'assistant' | 'system', content: string): void {
+    async addMessage(sessionId: string, role: 'user' | 'assistant' | 'system', content: string): Promise<void> {
         const session = this.sessions.get(sessionId);
         if (session) {
             session.messages.push({
@@ -83,6 +90,7 @@ export class SessionManager {
                 timestamp: Date.now()
             });
             session.lastUsed = Date.now();
+            await this.saveSession(session);
         }
     }
 
@@ -107,5 +115,59 @@ export class SessionManager {
         return Array.from(this.sessions.values())
             .filter(s => s.userId === userId)
             .sort((a, b) => b.lastUsed - a.lastUsed);
+    }
+
+    /**
+     * Save session to file
+     */
+    private async saveSession(session: Session): Promise<void> {
+        try {
+            const sessionFile = path.join(session.workingDir, 'session.json');
+            await fs.promises.writeFile(sessionFile, JSON.stringify(session, null, 2), 'utf8');
+        } catch (error) {
+            logger.error(`Failed to save session ${session.id}:`, error);
+        }
+    }
+
+    /**
+     * Load all sessions from workspace
+     */
+    async loadSessions(): Promise<void> {
+        try {
+            if (!fs.existsSync(this.baseWorkspace)) {
+                return;
+            }
+
+            const entries = await fs.promises.readdir(this.baseWorkspace, { withFileTypes: true });
+
+            for (const entry of entries) {
+                if (entry.isDirectory()) {
+                    const sessionDir = path.join(this.baseWorkspace, entry.name);
+                    const sessionFile = path.join(sessionDir, 'session.json');
+
+                    if (fs.existsSync(sessionFile)) {
+                        try {
+                            const content = await fs.promises.readFile(sessionFile, 'utf8');
+                            const session = JSON.parse(content) as Session;
+
+                            // Restore session to memory
+                            this.sessions.set(session.id, session);
+
+                            // Initialize executor
+                            const executor = new ToolExecutor(sessionDir);
+                            await executor.init();
+                            this.executors.set(session.id, executor);
+
+                            logger.info(`Loaded session ${session.id}`);
+                        } catch (e) {
+                            logger.error(`Error loading session from ${sessionFile}:`, e);
+                        }
+                    }
+                }
+            }
+            logger.info(`Restored ${this.sessions.size} sessions from disk`);
+        } catch (error) {
+            logger.error('Failed to load sessions:', error);
+        }
     }
 }
