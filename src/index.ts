@@ -126,6 +126,45 @@ async function main() {
         res.json({ sessions, activeId });
     });
 
+    // Get session messages endpoint
+    app.get('/api/sessions/:sessionId/messages', async (req: Request, res: Response) => {
+        const { sessionId } = req.params;
+        try {
+            const messages = await sessionManager.getSessionMessages(sessionId);
+            res.json({ messages, sessionId });
+        } catch (error: any) {
+            res.status(404).json({ error: error.message });
+        }
+    });
+
+    // Create new session endpoint
+    app.post('/api/sessions', async (req: Request, res: Response) => {
+        const { name, workingDir } = req.body;
+
+        const timestamp = new Date().toLocaleString('zh-CN', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        const sessionName = name || `对话 ${timestamp}`;
+        const dir = workingDir || process.cwd();
+
+        try {
+            const session = await sessionManager.createSession(sessionName, dir, 'interactive');
+            res.json({ session, success: true });
+        } catch (error: any) {
+            res.status(500).json({ error: error.message, success: false });
+        }
+    });
+
+    // Helper function to detect new session intent
+    const isNewSessionIntent = (message: string): boolean => {
+        return /^(创建|新建|开启|开始).*(项目|会话|session|对话)/i.test(message) ||
+            /^新(会话|对话)$/i.test(message) ||
+            /(开启|开始)新的?(会话|对话)/i.test(message);
+    };
+
     // Chat endpoint for frontend
     app.post('/api/chat', async (req: Request, res: Response) => {
         const { message, sessionId } = req.body;
@@ -136,6 +175,29 @@ async function main() {
         }
 
         try {
+            // Check if user wants to create a new session
+            if (isNewSessionIntent(message)) {
+                const timestamp = new Date().toLocaleString('zh-CN', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                const newSession = await sessionManager.createSession(
+                    `对话 ${timestamp}`,
+                    process.cwd(),
+                    'interactive'
+                );
+
+                res.json({
+                    reply: `✅ 已创建新会话：${newSession.name}\n\n📁 会话 ID: ${newSession.id}\n📂 工作目录: ${newSession.workingDir}\n\n现在可以开始新的对话了！`,
+                    sessionId: newSession.id,
+                    success: true,
+                    isNewSession: true
+                });
+                return;
+            }
+
             let activeSessionId = sessionId || sessionManager.getActiveSessionId();
 
             // Create default session if none exists

@@ -37,6 +37,22 @@ export async function getSessions(): Promise<any> {
     return res.json();
 }
 
+// Get session messages
+export async function getSessionMessages(sessionId: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/messages`);
+    return res.json();
+}
+
+// Create new session
+export async function createSession(name?: string, workingDir?: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, workingDir }),
+    });
+    return res.json();
+}
+
 // Get tasks
 export async function getTasks(): Promise<any> {
     const res = await fetch(`${API_BASE}/api/tasks`);

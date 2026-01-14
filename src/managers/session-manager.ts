@@ -13,7 +13,8 @@ import {
     SessionMetadata,
     SessionsConfig,
     SessionData,
-    SessionExecutionResult
+    SessionExecutionResult,
+    SessionMessage
 } from '../types/session';
 import { Task } from '../types/task';
 
@@ -205,6 +206,17 @@ export class SessionManager {
      */
     getSessions(): SessionMetadata[] {
         return this.sessionsConfig.sessions;
+    }
+
+    /**
+     * Get messages for a session
+     */
+    async getSessionMessages(sessionId: string): Promise<SessionMessage[]> {
+        const sessionData = await this.loadSessionData(sessionId);
+        if (!sessionData) {
+            throw new Error(`Session not found: ${sessionId}`);
+        }
+        return sessionData.messages;
     }
 
     /**

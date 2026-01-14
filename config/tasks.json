@@ -1,52 +1,52 @@
 {
-    "tasks": [
-        {
-            "id": "task_daily_system_check_20250114",
-            "name": "每日系统检查",
-            "cron": "0 9 * * *",
-            "enabled": true,
-            "instruction": "请执行系统检查任务：\n1. 检查磁盘空间使用情况（使用 df -h 命令）\n2. 检查内存使用情况（使用 free 命令或 vm_stat 命令）\n3. 检查 CPU 使用情况（使用 top 命令或 ps 命令）\n4. 检查当前运行的进程数量\n5. 汇总检查结果并提供系统健康状态评估",
-            "workingDir": "/Users/xuehongyu/Downloads/cloudclaude",
-            "context": {
-                "type": "system_check",
-                "priority": "high"
-            },
-            "sessionId": null,
-            "createdAt": "2025-01-14T09:00:00.000Z",
-            "lastRun": null,
-            "lastStatus": null
-        },
-        {
-            "id": "task_daily_data_collection_20250114",
-            "name": "每日数据采集",
-            "cron": "0 12 * * *",
-            "enabled": true,
-            "instruction": "请执行每日数据采集任务：\n1. 检查系统运行状态和资源使用情况\n2. 统计项目目录下的文件数量和类型分布\n3. 查看最近的日志文件内容\n4. 检查定时任务执行情况\n5. 生成数据汇总报告并保存到 data/daily_report_[日期].txt\n6. 发送采集完成通知，包含关键指标摘要",
-            "workingDir": "/Users/xuehongyu/Downloads/cloudclaude",
-            "context": {
-                "type": "data_collection",
-                "priority": "medium"
-            },
-            "sessionId": null,
-            "createdAt": "2025-01-14T12:00:00.000Z",
-            "lastRun": null,
-            "lastStatus": null
-        },
-        {
-            "id": "task_evening_data_fetch_20250114",
-            "name": "晚间数据获取",
-            "cron": "0 19 * * *",
-            "enabled": true,
-            "instruction": "请执行晚间数据获取任务：\n1. 检查当天所有日志文件的最新内容\n2. 统计系统资源使用趋势（对比早晨和中午的数据）\n3. 检查项目中是否有新增或修改的文件\n4. 获取网络连接状态和端口使用情况\n5. 检查所有定时任务的执行状态和日志\n6. 生成晚间数据报告并保存到 data/evening_report_[日期].txt\n7. 发送晚间汇总通知，包含今日系统运行概况",
-            "workingDir": "/Users/xuehongyu/Downloads/cloudclaude",
-            "context": {
-                "type": "evening_fetch",
-                "priority": "medium"
-            },
-            "sessionId": null,
-            "createdAt": "2025-01-14T19:00:00.000Z",
-            "lastRun": null,
-            "lastStatus": null
-        }
-    ]
+  "tasks": [
+    {
+      "id": "task_daily_system_check_20250114",
+      "name": "每日系统检查",
+      "cron": "0 9 * * *",
+      "enabled": true,
+      "instruction": "请执行系统检查任务：\n1. 检查磁盘空间使用情况（使用 df -h 命令）\n2. 检查内存使用情况（使用 free 命令或 vm_stat 命令）\n3. 检查 CPU 使用情况（使用 top 命令或 ps 命令）\n4. 检查当前运行的进程数量\n5. 汇总检查结果并提供系统健康状态评估",
+      "workingDir": "/Users/xuehongyu/Downloads/cloudclaude",
+      "context": {
+        "type": "system_check",
+        "priority": "high"
+      },
+      "sessionId": null,
+      "createdAt": "2025-01-14T09:00:00.000Z",
+      "lastRun": "2026-01-14T01:00:24.871Z",
+      "lastStatus": "success"
+    },
+    {
+      "id": "task_daily_data_collection_20250114",
+      "name": "每日数据采集",
+      "cron": "0 12 * * *",
+      "enabled": true,
+      "instruction": "请执行每日数据采集任务：\n1. 检查系统运行状态和资源使用情况\n2. 统计项目目录下的文件数量和类型分布\n3. 查看最近的日志文件内容\n4. 检查定时任务执行情况\n5. 生成数据汇总报告并保存到 data/daily_report_[日期].txt\n6. 发送采集完成通知，包含关键指标摘要",
+      "workingDir": "/Users/xuehongyu/Downloads/cloudclaude",
+      "context": {
+        "type": "data_collection",
+        "priority": "medium"
+      },
+      "sessionId": null,
+      "createdAt": "2025-01-14T12:00:00.000Z",
+      "lastRun": null,
+      "lastStatus": null
+    },
+    {
+      "id": "task_evening_data_fetch_20250114",
+      "name": "晚间数据获取",
+      "cron": "0 19 * * *",
+      "enabled": true,
+      "instruction": "请执行晚间数据获取任务：\n1. 检查当天所有日志文件的最新内容\n2. 统计系统资源使用趋势（对比早晨和中午的数据）\n3. 检查项目中是否有新增或修改的文件\n4. 获取网络连接状态和端口使用情况\n5. 检查所有定时任务的执行状态和日志\n6. 生成晚间数据报告并保存到 data/evening_report_[日期].txt\n7. 发送晚间汇总通知，包含今日系统运行概况",
+      "workingDir": "/Users/xuehongyu/Downloads/cloudclaude",
+      "context": {
+        "type": "evening_fetch",
+        "priority": "medium"
+      },
+      "sessionId": null,
+      "createdAt": "2025-01-14T19:00:00.000Z",
+      "lastRun": null,
+      "lastStatus": null
+    }
+  ]
 }

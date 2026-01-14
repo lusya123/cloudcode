@@ -89,6 +89,89 @@ export async function updateAnthropicConfig(updates: {
 }
 
 /**
+ * Get all pre-configured models
+ */
+export async function getConfiguredModels(): Promise<{ name: string; model: string; baseUrl?: string }[]> {
+    const credentials = await loadCredentials();
+    return (credentials.models || []).map(m => ({
+        name: m.name,
+        model: m.model,
+        baseUrl: m.baseUrl
+    }));
+}
+
+/**
+ * Find model configuration by name (case-insensitive, fuzzy match)
+ */
+export async function findModelByName(name: string): Promise<{
+    name: string;
+    apiKey: string;
+    baseUrl?: string;
+    model: string;
+} | null> {
+    const credentials = await loadCredentials();
+    const models = credentials.models || [];
+
+    const lowerName = name.toLowerCase().trim();
+
+    // Try exact match first
+    let found = models.find(m => m.name.toLowerCase() === lowerName);
+
+    // Try partial match if no exact match
+    if (!found) {
+        found = models.find(m =>
+            m.name.toLowerCase().includes(lowerName) ||
+            lowerName.includes(m.name.toLowerCase())
+        );
+    }
+
+    return found || null;
+}
+
+/**
+ * Switch to a pre-configured model by name
+ * Updates the current anthropic configuration to use the specified model
+ */
+export async function switchToModel(modelName: string): Promise<{
+    success: boolean;
+    message: string;
+    modelConfig?: { name: string; model: string; baseUrl?: string };
+}> {
+    const modelConfig = await findModelByName(modelName);
+
+    if (!modelConfig) {
+        const available = await getConfiguredModels();
+        const availableNames = available.map(m => m.name).join(', ');
+        return {
+            success: false,
+            message: `未找到模型 "${modelName}"。可用模型: ${availableNames || '(无预配置模型)'}`
+        };
+    }
+
+    // Update current anthropic config to use this model
+    await updateAnthropicConfig({
+        apiKey: modelConfig.apiKey,
+        baseUrl: modelConfig.baseUrl,
+        model: modelConfig.model
+    });
+
+    logger.info(`Switched to model: ${modelConfig.name}`, {
+        model: modelConfig.model,
+        baseUrl: modelConfig.baseUrl
+    });
+
+    return {
+        success: true,
+        message: `已切换到模型: ${modelConfig.name} (${modelConfig.model})`,
+        modelConfig: {
+            name: modelConfig.name,
+            model: modelConfig.model,
+            baseUrl: modelConfig.baseUrl
+        }
+    };
+}
+
+/**
  * Load permissions configuration
  */
 export async function loadPermissions(): Promise<PermissionConfig> {

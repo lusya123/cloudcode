@@ -16,7 +16,7 @@ export function MessageList({ messages }: MessageListProps) {
 
     if (messages.length === 0) {
         return (
-            <div className="flex-1 flex items-center justify-center text-gray-400">
+            <div className="flex-1 min-h-0 flex items-center justify-center text-gray-400">
                 <div className="text-center">
                     <p className="text-4xl mb-4">💬</p>
                     <p>开始对话吧！</p>
@@ -27,17 +27,17 @@ export function MessageList({ messages }: MessageListProps) {
     }
 
     return (
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
             {messages.map((message, index) => (
                 <div
                     key={index}
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                     <div
-                        className={`max-w-[80%] px-4 py-2 ${message.role === 'user' ? 'message-user' : 'message-assistant'
+                        className={`max-w-[80%] px-4 py-2 overflow-hidden ${message.role === 'user' ? 'message-user' : 'message-assistant'
                             }`}
                     >
-                        <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+                        <p className="whitespace-pre-wrap text-sm break-words overflow-wrap-anywhere">{message.content}</p>
                     </div>
                 </div>
             ))}

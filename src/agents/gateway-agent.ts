@@ -8,6 +8,7 @@ import { SessionManager } from '../managers/session-manager';
 import { TaskScheduler } from '../scheduler/task-scheduler';
 import { Logger } from '../utils/logger';
 import { ParsedFeishuMessage } from '../types/feishu';
+import { switchToModel, getConfiguredModels } from '../utils/config-loader';
 
 const logger = new Logger('GatewayAgent');
 
@@ -19,6 +20,8 @@ type IntentType =
     | 'task_execution'
     | 'schedule_task'
     | 'list_tasks'
+    | 'switch_model'
+    | 'list_models'
     | 'configure'
     | 'help'
     | 'continue';
@@ -83,6 +86,12 @@ export class GatewayAgent {
                 case 'list_tasks':
                     await this.handleListTasks(chatId);
                     break;
+                case 'switch_model':
+                    await this.handleSwitchModel(chatId, intent.params);
+                    break;
+                case 'list_models':
+                    await this.handleListModels(chatId);
+                    break;
                 case 'help':
                     await this.handleHelp(chatId);
                     break;
@@ -104,7 +113,10 @@ export class GatewayAgent {
     private async analyzeIntent(text: string): Promise<Intent> {
         // Quick pattern matching for common intents
 
-        if (/^(创建|新建).*(项目|会话|session)/i.test(text)) {
+        // Match various ways to request a new session/conversation
+        if (/^(创建|新建|开启|开始).*(项目|会话|session|对话)/i.test(text) ||
+            /^新(会话|对话)$/i.test(text) ||
+            /(开启|开始)新的?(会话|对话)/i.test(text)) {
             return { type: 'new_session', confidence: 0.9 };
         }
         if (/^切换.*(项目|会话)/i.test(text)) {
@@ -120,6 +132,19 @@ export class GatewayAgent {
         }
         if (/^(查看|列出|显示).*(任务|定时)/i.test(text)) {
             return { type: 'list_tasks', confidence: 0.9 };
+        }
+        // Model switching: "切换模型为 XXX" or "切换模型到 XXX" or "使用 XXX 模型"
+        if (/切换模型(?:为|到)?(.+)/i.test(text) || /使用(.+)模型/i.test(text)) {
+            const match = text.match(/切换模型(?:为|到)?(.+)/i) || text.match(/使用(.+)模型/i);
+            return {
+                type: 'switch_model',
+                params: { modelName: match?.[1]?.trim() },
+                confidence: 0.95
+            };
+        }
+        // List models: "查看模型" or "列出模型" or "可用模型"
+        if (/^(查看|列出|显示|可用).*(模型)/i.test(text)) {
+            return { type: 'list_models', confidence: 0.9 };
         }
         if (/(每天|每周|每月|每小时|定时|cron)/i.test(text)) {
             return { type: 'schedule_task', confidence: 0.8 };
@@ -158,13 +183,35 @@ export class GatewayAgent {
      * Handle new session creation
      */
     private async handleNewSession(_text: string, chatId: string, _params?: Record<string, any>): Promise<void> {
-        await this.adapter.sendMessage(
-            '📁 创建新会话\n\n' +
-            '请告诉我：\n' +
-            '1. 会话/项目名称是什么？\n' +
-            '2. 工作目录是？（例如：/home/projects/my-app）',
-            chatId
-        );
+        // Automatically create a new session with a default name
+        const timestamp = new Date().toLocaleString('zh-CN', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        const sessionName = `对话 ${timestamp}`;
+
+        try {
+            const session = await this.sessionManager.createSession(
+                sessionName,
+                this.defaultWorkingDir,
+                'interactive'
+            );
+
+            await this.adapter.sendMessage(
+                `✅ 已创建新会话：${session.name}\n\n` +
+                `📁 会话 ID: ${session.id}\n` +
+                `📂 工作目录: ${session.workingDir}\n\n` +
+                `现在可以开始新的对话了！`,
+                chatId
+            );
+        } catch (error: any) {
+            await this.adapter.sendMessage(
+                `❌ 创建会话失败：${error.message}`,
+                chatId
+            );
+        }
     }
 
     /**
@@ -268,6 +315,63 @@ export class GatewayAgent {
     }
 
     /**
+     * Handle model switching
+     */
+    private async handleSwitchModel(chatId: string, params?: Record<string, any>): Promise<void> {
+        const modelName = params?.modelName;
+
+        if (!modelName) {
+            await this.adapter.sendMessage(
+                '❓ 请指定要切换的模型名称\n\n' +
+                '例如：切换模型为 zhipu-claude',
+                chatId
+            );
+            return;
+        }
+
+        const result = await switchToModel(modelName);
+
+        if (result.success) {
+            await this.adapter.sendMessage(
+                `✅ ${result.message}\n\n` +
+                `📌 注意：新会话将使用此模型配置`,
+                chatId
+            );
+        } else {
+            await this.adapter.sendMessage(`❌ ${result.message}`, chatId);
+        }
+    }
+
+    /**
+     * List available models
+     */
+    private async handleListModels(chatId: string): Promise<void> {
+        const models = await getConfiguredModels();
+
+        if (models.length === 0) {
+            await this.adapter.sendMessage(
+                '📭 尚未配置任何模型\n\n' +
+                '请在 config/credentials.json 中添加 models 配置',
+                chatId
+            );
+            return;
+        }
+
+        let message = '🤖 **可用模型列表**\n\n';
+        for (const model of models) {
+            message += `• **${model.name}**\n`;
+            message += `  模型: ${model.model}\n`;
+            if (model.baseUrl) {
+                message += `  API: ${model.baseUrl}\n`;
+            }
+            message += '\n';
+        }
+        message += '💡 使用 "切换模型为 XXX" 来切换模型';
+
+        await this.adapter.sendMessage(message, chatId);
+    }
+
+    /**
      * Show help
      */
     private async handleHelp(chatId: string): Promise<void> {
@@ -277,6 +381,10 @@ export class GatewayAgent {
 • 创建新会话 - 创建新的工作会话
 • 查看会话 - 列出所有会话
 • 切换到 xxx - 切换到指定会话
+
+**模型管理**
+• 查看模型 - 列出所有可用模型
+• 切换模型为 xxx - 切换到指定模型
 
 **定时任务**
 • 查看任务 - 列出所有定时任务

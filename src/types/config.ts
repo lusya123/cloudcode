@@ -17,10 +17,19 @@ export interface AnthropicCredentials {
   model?: string;    // Optional: default model to use
 }
 
+// Single model configuration (for multi-model scenarios)
+export interface ModelConfig {
+  name: string;        // Model alias, e.g. "zhipu-claude", "openai-gpt4"
+  apiKey: string;
+  baseUrl?: string;
+  model: string;       // Actual model identifier, e.g. "claude-sonnet-4-20250514"
+}
+
 // Complete credentials configuration
 export interface CredentialsConfig {
   feishu: FeishuCredentials;
   anthropic: AnthropicCredentials;
+  models?: ModelConfig[];  // Optional: pre-configured model list for switching
 }
 
 // Permission rule configuration

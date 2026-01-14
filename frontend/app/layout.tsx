@@ -18,9 +18,9 @@ export default function RootLayout({
             <body>
                 <div className="flex min-h-screen">
                     <Sidebar />
-                    <main className="flex-1 ml-56">
+                    <main className="flex-1 ml-56 min-w-0 flex flex-col">
                         <Header />
-                        <div className="h-[calc(100vh-56px)]">
+                        <div className="flex-1 min-h-0 overflow-hidden">
                             {children}
                         </div>
                     </main>
