@@ -1,0 +1,17 @@
+{
+  "tasks": [
+    {
+      "id": "task_001",
+      "name": "Daily Status Check",
+      "cron": "0 9 * * *",
+      "enabled": true,
+      "instruction": "Check server status and summarize.",
+      "workingDir": "/opt/cloud-claude",
+      "context": {
+        "servers": ["server1", "server2"]
+      },
+      "sessionId": null,
+      "createdAt": "2024-01-13T10:00:00Z"
+    }
+  ]
+}

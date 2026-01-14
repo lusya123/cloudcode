@@ -1,0 +1,15 @@
+node_modules/
+dist/
+logs/
+data/
+config/credentials.json
+config/providers.json
+config/tasks.json
+config/sessions.json
+config/permissions.json
+config/mcp-servers.json
+.env
+.env.local
+frontend/node_modules/
+frontend/.next/
+frontend/out/

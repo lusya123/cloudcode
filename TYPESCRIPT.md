@@ -91,9 +91,6 @@ export interface Credentials {
     encryptKey?: string;
     verificationToken: string;
   };
-  anthropic: {
-    apiKey: string;
-  };
 }
 
 export interface SessionMetadata {
@@ -266,6 +263,7 @@ export class FeishuAdapter {
 import fs from 'fs';
 import path from 'path';
 import type { Credentials, SessionsConfig } from '../types/config';
+import type { ProviderConfig } from '../types/provider';
 import type { TasksConfig } from '../types/task';
 
 const CONFIG_DIR = process.env.CONFIG_DIR || '/opt/cloud-claude/config';
@@ -274,6 +272,20 @@ export function loadCredentials(): Credentials {
   const filePath = path.join(CONFIG_DIR, 'credentials.json');
   const content = fs.readFileSync(filePath, 'utf8');
   return JSON.parse(content) as Credentials;
+}
+
+export function loadProviderConfig(): ProviderConfig {
+  const filePath = path.join(CONFIG_DIR, 'providers.json');
+  if (!fs.existsSync(filePath)) {
+    return {
+      provider: 'anthropic',
+      apiKey: '',
+      baseUrl: 'https://api.anthropic.com',
+      model: 'claude-sonnet-4-20250514'
+    };
+  }
+  const content = fs.readFileSync(filePath, 'utf8');
+  return JSON.parse(content) as ProviderConfig;
 }
 
 export function loadTasks(): TasksConfig {
@@ -395,7 +407,7 @@ const config = JSON.parse(content) as Credentials;
 function parseCredentials(content: string): Credentials {
   const data = JSON.parse(content);
 
-  if (!data.feishu || !data.anthropic) {
+  if (!data.feishu) {
     throw new Error('Invalid credentials format');
   }
 
